@@ -9,8 +9,8 @@ from utils.metrics import iou_stats
 
 def parse_argument():
   parser = argparse.ArgumentParser(
-      description='Benchmark over 2D-3D-Semantics on segmentation, '\
-                   +'depth and surface normals estimation')
+    description='Benchmark over 2D-3D-Semantics on segmentation, ' \
+                +'depth and surface normals estimation')
   parser.add_argument('--pred_dir', type=str, default='',
                       help='/path/to/prediction.')
   parser.add_argument('--gt_dir', type=str, default='',
@@ -85,68 +85,68 @@ def benchmark_segmentation(pred_dir, gt_dir, num_classes, string_replace):
 
 def benchmark_depth(pred_dir, gt_dir, string_replace):
   """Benchmark depth estimation.
-  """
-  print('Benchmarking depth estimations.')
-  assert(os.path.isdir(pred_dir))
-  assert(os.path.isdir(gt_dir))
-  N = 0.0
-  rmse_linear = 0.0
-  rmse_log = 0.0
-  absrel = 0.0
-  sqrrel = 0.0
-  thresholds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-  powers = [1/8.0, 1/4.0, 1/2.0, 1.0, 2.0, 3.0]
+"""
+print('Benchmarking depth estimations.')
+assert(os.path.isdir(pred_dir))
+assert(os.path.isdir(gt_dir))
+N = 0.0
+rmse_linear = 0.0
+rmse_log = 0.0
+absrel = 0.0
+sqrrel = 0.0
+thresholds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+powers = [1/8.0, 1/4.0, 1/2.0, 1.0, 2.0, 3.0]
 
-  for dirpath, dirnames, filenames in os.walk(pred_dir):
-    for filename in filenames:
-      predname = os.path.join(dirpath, filename)
-      gtname = predname.replace(pred_dir, gt_dir)
-      if string_replace != '':
-        stra, strb = string_replace.split(',')
-        gtname = gtname.replace(stra, strb)
+for dirpath, dirnames, filenames in os.walk(pred_dir):
+  for filename in filenames:
+    predname = os.path.join(dirpath, filename)
+    gtname = predname.replace(pred_dir, gt_dir)
+    if string_replace != '':
+      stra, strb = string_replace.split(',')
+      gtname = gtname.replace(stra, strb)
 
-      pred = np.asarray(
-          Image.open(predname).convert(mode='I'),
-          dtype=np.int32)
-      gt = np.asarray(
-          Image.open(gtname).convert(mode='I'),
-          dtype=np.int32)
+    pred = np.asarray(
+      Image.open(predname).convert(mode='I'),
+      dtype=np.int32)
+    gt = np.asarray(
+      Image.open(gtname).convert(mode='I'),
+      dtype=np.int32)
 
-      pred = np.reshape(pred, (-1,))
-      gt = np.reshape(gt, (-1,))
-      #mask = np.logical_and(gt >= 51, gt <= 26560)
-      mask = gt < 2**16-1
+    pred = np.reshape(pred, (-1,))
+    gt = np.reshape(gt, (-1,))
+    #mask = np.logical_and(gt >= 51, gt <= 26560)
+    mask = gt < 2**16-1
 
-      pred = np.clip(pred, 51, 26560)
-      pred = pred[mask].astype(np.float32)/args.depth_unit
-      gt = gt[mask].astype(np.float32)/args.depth_unit
+    pred = np.clip(pred, 51, 26560)
+    pred = pred[mask].astype(np.float32)/args.depth_unit
+    gt = gt[mask].astype(np.float32)/args.depth_unit
 
-      rmse_linear += np.sum((pred-gt)**2)
-      rmse_log += np.sum(
-          (np.log(np.maximum(pred, 1e-12))-np.log(np.maximum(gt, 1e-12)))**2)
-      absrel += np.sum(np.abs(pred-gt)/gt)
-      sqrrel += np.sum((pred-gt)**2/gt)
-      th = np.maximum(pred/gt, gt/pred)
-      for i in range(len(thresholds)):
-        #thresholds[i] += np.sum(th < 1.25**(i+1))
-        thresholds[i] += np.sum(th < 1.25**powers[i])
-      N += pred.shape[0]
+    rmse_linear += np.sum((pred-gt)**2)
+    rmse_log += np.sum(
+      (np.log(np.maximum(pred, 1e-12))-np.log(np.maximum(gt, 1e-12)))**2)
+    absrel += np.sum(np.abs(pred-gt)/gt)
+    sqrrel += np.sum((pred-gt)**2/gt)
+    th = np.maximum(pred/gt, gt/pred)
+    for i in range(len(thresholds)):
+      #thresholds[i] += np.sum(th < 1.25**(i+1))
+      thresholds[i] += np.sum(th < 1.25**powers[i])
+    N += pred.shape[0]
 
-  rmse_linear = np.sqrt(rmse_linear/N)
-  rmse_log = np.sqrt(rmse_log/N)
-  absrel = absrel / N
-  sqrrel = sqrrel / N
-  for i in range(len(thresholds)):
-    thresholds[i] = thresholds[i] / N
-  print('RMSE(lin): {:.4f}'.format(rmse_linear))
-  print('RMSE(log): {:.4f}'.format(rmse_log))
-  print('abs rel: {:.4f}'.format(absrel))
-  print('sqr rel: {:.4f}'.format(sqrrel))
-  for i in range(len(thresholds)):
-    print('\sigma < 1.25^{:.4f}: {:.4f}'.format(powers[i], thresholds[i]))
-  print('\sigma < 1.25: {:.4f}'.format(thresholds[0]))
-  print('\sigma < 1.25^2: {:.4f}'.format(thresholds[1]))
-  print('\sigma < 1.25^3: {:.4f}'.format(thresholds[2]))
+rmse_linear = np.sqrt(rmse_linear/N)
+rmse_log = np.sqrt(rmse_log/N)
+absrel = absrel / N
+sqrrel = sqrrel / N
+for i in range(len(thresholds)):
+  thresholds[i] = thresholds[i] / N
+print('RMSE(lin): {:.4f}'.format(rmse_linear))
+print('RMSE(log): {:.4f}'.format(rmse_log))
+print('abs rel: {:.4f}'.format(absrel))
+print('sqr rel: {:.4f}'.format(sqrrel))
+for i in range(len(thresholds)):
+  print('\sigma < 1.25^{:.4f}: {:.4f}'.format(powers[i], thresholds[i]))
+print('\sigma < 1.25: {:.4f}'.format(thresholds[0]))
+print('\sigma < 1.25^2: {:.4f}'.format(thresholds[1]))
+print('\sigma < 1.25^3: {:.4f}'.format(thresholds[2]))
 
 
 def benchmark_normal(pred_dir, gt_dir, string_replace):
@@ -167,11 +167,11 @@ def benchmark_normal(pred_dir, gt_dir, string_replace):
         gtname = gtname.replace(stra, strb)
 
       pred = np.asarray(
-          Image.open(predname).convert(mode='RGB'),
-          dtype=np.uint8)
+        Image.open(predname).convert(mode='RGB'),
+        dtype=np.uint8)
       gt = np.asarray(
-          Image.open(gtname).convert(mode='RGB'),
-          dtype=np.uint8)
+        Image.open(gtname).convert(mode='RGB'),
+        dtype=np.uint8)
 
       pred = np.reshape(pred, (-1,3))
       gt = np.reshape(gt, (-1,3))
